@@ -21,7 +21,7 @@ Let's consider a grey pixel $(2,1)$ on the example image:
 ![dual gradient energy calculation](img1.png)
 
 X-differences are:
-$R_x(2,1)=255−150=105$, $G_x(2,1)=250−150=100$, $Bx(2,1)=155−100=55$
+$R_x(2,1)=255−150=105$, $G_x(2,1)=250−150=100$, $B_x(2,1)=155−100=55$
 
 So, x-gradient is $Δ^2_x(2,1)=1052+1002+552=24050$
 
@@ -33,11 +33,11 @@ Same for y-gradient $Δ^2_y=402+52+2152=47850$
 Finally, $E(2,1)=\sqrt{24050+47850}=268.14$
 
 Energy for border pixels is calculated with a 1-pixel shift from the border. For example:
-$E(0,2)=\sqrt{Δ^2_x(1,2)+Δ2y(0,2)}$
+$E(0,2)=\sqrt{Δ^2_x(1,2)+Δ^2_y(0,2)}$
 
-$E(1,0)=\sqrt{Δ2x(1,0)+Δ2y(1,1)}$
+$E(1,0)=\sqrt{Δ^2_x(1,0)+Δ^2_y(1,1)}$
 
-$E(0,0)=\sqrt{Δ2x(1,0)+Δ2y(0,1)}$
+$E(0,0)=\sqrt{Δ^2_x(1,0)+Δ^2_y(0,1)}$
 
 ## Objective
 Calculate energies for all pixels of the image. Normalize calculated energies using the following formula:
@@ -59,4 +59,4 @@ For the following `sky.png`:
 
 `sky-energy.png` should look like this:
 
-[!river side building energy map](img3.png)
+![river side building energy map](img3.png)
