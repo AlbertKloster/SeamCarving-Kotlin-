@@ -4,6 +4,7 @@ import java.awt.Color
 import java.io.File
 import java.io.IOException
 import javax.imageio.ImageIO
+import kotlin.math.sqrt
 
 fun main(args: Array<String>) {
 
@@ -22,40 +23,42 @@ fun main(args: Array<String>) {
         return
     }
 
+    val energyMatrix = mutableListOf<MutableList<Double>>()
+
+    for (x in 0 until bufferedImage.width) {
+        val energyColumn = mutableListOf<Double>()
+        for (y in 0 until bufferedImage.height) {
+            val xCorr = if (x == 0) 1 else if (x == bufferedImage.width - 1) x - 1 else x
+            val yCorr = if (y == 0) 1 else if (y == bufferedImage.height - 1) y - 1 else y
+            val colorLeft = Color(bufferedImage.getRGB(xCorr - 1, y))
+            val colorRight = Color(bufferedImage.getRGB(xCorr + 1, y))
+            val colorUp = Color(bufferedImage.getRGB(x, yCorr - 1))
+            val colorDown = Color(bufferedImage.getRGB(x, yCorr + 1))
+            val gradX = (colorLeft.red - colorRight.red) * (colorLeft.red - colorRight.red).toDouble() +
+                    (colorLeft.green - colorRight.green) * (colorLeft.green - colorRight.green).toDouble() +
+                    (colorLeft.blue - colorRight.blue) * (colorLeft.blue - colorRight.blue).toDouble()
+
+            val gradY = (colorUp.red - colorDown.red) * (colorUp.red - colorDown.red).toDouble() +
+                    (colorUp.green - colorDown.green) * (colorUp.green - colorDown.green).toDouble() +
+                    (colorUp.blue - colorDown.blue) * (colorUp.blue - colorDown.blue).toDouble()
+
+            val energy = sqrt(gradX + gradY)
+
+            energyColumn.add(energy)
+        }
+        energyMatrix.add(energyColumn)
+    }
+
+    val maxEnergyValue = energyMatrix.flatten().maxOrNull()
+
     for (x in 0 until bufferedImage.width) {
         for (y in 0 until bufferedImage.height) {
-            val color = Color(bufferedImage.getRGB(x, y))
-            val r = 255 - color.red
-            val g = 255 - color.green
-            val b = 255 - color.blue
-            bufferedImage.setRGB(x, y, Color(r, g, b).rgb)
+            val intensity = (255.0 * energyMatrix[x][y] / maxEnergyValue!!).toInt()
+            bufferedImage.setRGB(x, y, Color(intensity, intensity, intensity).rgb)
         }
     }
 
     ImageIO.write(bufferedImage, "png", File(outputFile))
-
-
-
-//    println("Enter rectangle width:")
-//    val width = readln().toInt()
-//
-//    println("Enter rectangle height:")
-//    val height = readln().toInt()
-//
-//    println("Enter output image name:")
-//    val imageName = readln()
-//
-//    val bufferedImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-//    val graphics = bufferedImage.createGraphics()
-//
-//    graphics.paint = Color.BLACK
-//    graphics.fillRect(0, 0, width, height)
-//
-//    graphics.color = Color.RED
-//    graphics.drawLine(0, 0, width - 1, height - 1)
-//    graphics.drawLine(0, height - 1, width - 1, 0)
-//
-//    ImageIO.write(bufferedImage, "png", File(imageName))
 
 }
 
