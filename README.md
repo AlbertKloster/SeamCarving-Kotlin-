@@ -6,7 +6,7 @@ The first step is to calculate the <b>energy</b> for each pixel of the image. En
 
 There are several different energy functions invented for seam carving. In this project, we will use <b>dual-gradient energy function</b>.
 
-The energy of the pixel $(x,y)$$ is $(E(x,y)=/sqrt{Δ^2_x(x,y)+Δ^2_y(x,y)})$$
+The energy of the pixel $(x,y)$ is $(E(x,y)=\sqrt{Δ^2_x(x,y)+Δ^2_y(x,y)})$
 
 Where the square of x-gradient $(Δ2x(x,y)=Rx(x,y)2+Gx(x,y)2+Bx(x,y)2)$$
 
