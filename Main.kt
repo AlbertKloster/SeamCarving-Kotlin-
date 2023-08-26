@@ -1,6 +1,7 @@
 package seamcarving
 
 import java.awt.Color
+import java.awt.image.BufferedImage
 import java.io.File
 import java.io.IOException
 import java.util.*
@@ -24,17 +25,19 @@ fun main(args: Array<String>) {
         return
     }
 
+    val bufferedImage90DegreesRight = rotateImage90DegreesRight(bufferedImage)
+
     val energyMatrix = mutableListOf<MutableList<Double>>()
 
-    for (x in 0 until bufferedImage.width) {
+    for (x in 0 until bufferedImage90DegreesRight.width) {
         val energyColumn = mutableListOf<Double>()
-        for (y in 0 until bufferedImage.height) {
-            val xCorr = if (x == 0) 1 else if (x == bufferedImage.width - 1) x - 1 else x
-            val yCorr = if (y == 0) 1 else if (y == bufferedImage.height - 1) y - 1 else y
-            val colorLeft = Color(bufferedImage.getRGB(xCorr - 1, y))
-            val colorRight = Color(bufferedImage.getRGB(xCorr + 1, y))
-            val colorUp = Color(bufferedImage.getRGB(x, yCorr - 1))
-            val colorDown = Color(bufferedImage.getRGB(x, yCorr + 1))
+        for (y in 0 until bufferedImage90DegreesRight.height) {
+            val xCorr = if (x == 0) 1 else if (x == bufferedImage90DegreesRight.width - 1) x - 1 else x
+            val yCorr = if (y == 0) 1 else if (y == bufferedImage90DegreesRight.height - 1) y - 1 else y
+            val colorLeft = Color(bufferedImage90DegreesRight.getRGB(xCorr - 1, y))
+            val colorRight = Color(bufferedImage90DegreesRight.getRGB(xCorr + 1, y))
+            val colorUp = Color(bufferedImage90DegreesRight.getRGB(x, yCorr - 1))
+            val colorDown = Color(bufferedImage90DegreesRight.getRGB(x, yCorr + 1))
             val gradX =
                 (colorLeft.red - colorRight.red) * (colorLeft.red - colorRight.red).toDouble() + (colorLeft.green - colorRight.green) * (colorLeft.green - colorRight.green).toDouble() + (colorLeft.blue - colorRight.blue) * (colorLeft.blue - colorRight.blue).toDouble()
 
@@ -65,10 +68,10 @@ fun main(args: Array<String>) {
     val shortestPath = findShortestPath(matrix)
 
     for (coordinates in shortestPath) {
-        bufferedImage.setRGB(coordinates.x, coordinates.y, Color(255, 0, 0).rgb)
+        bufferedImage90DegreesRight.setRGB(coordinates.x, coordinates.y, Color(255, 0, 0).rgb)
     }
 
-    ImageIO.write(bufferedImage, "png", File(outputFile))
+    ImageIO.write(rotateImage90DegreesLeft(bufferedImage90DegreesRight), "png", File(outputFile))
 
 }
 
@@ -166,4 +169,36 @@ fun findShortestPath(matrix: List<List<Double>>): List<Coordinate> {
     // and shift y-coordinate by one to match the initial energy matrix
     return shortestPath.filter { coordinate -> coordinate.y > 0 && coordinate.y < numRows - 1 }
         .map { coordinate -> Coordinate(coordinate.x, coordinate.y - 1) }
+}
+
+fun rotateImage90DegreesRight(inputImage: BufferedImage): BufferedImage {
+    val width = inputImage.width
+    val height = inputImage.height
+
+    val rotatedImage = BufferedImage(height, width, inputImage.type)
+
+    for (x in 0 until width) {
+        for (y in 0 until height) {
+            val pixel = inputImage.getRGB(x, y)
+            rotatedImage.setRGB(height - 1 - y, x, pixel)
+        }
+    }
+
+    return rotatedImage
+}
+
+fun rotateImage90DegreesLeft(inputImage: BufferedImage): BufferedImage {
+    val width = inputImage.width
+    val height = inputImage.height
+
+    val rotatedImage = BufferedImage(height, width, inputImage.type)
+
+    for (x in 0 until width) {
+        for (y in 0 until height) {
+            val pixel = inputImage.getRGB(x, y)
+            rotatedImage.setRGB(y, width - 1 - x, pixel)
+        }
+    }
+
+    return rotatedImage
 }
