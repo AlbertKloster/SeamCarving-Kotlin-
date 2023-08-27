@@ -1,78 +1,36 @@
 package seamcarving
 
-import java.awt.Color
-import java.awt.image.BufferedImage
-import java.io.File
-import java.io.IOException
 import java.util.*
-import javax.imageio.ImageIO
-import kotlin.math.sqrt
 
 fun main(args: Array<String>) {
-
     val inputFile = getInputFile(args)
     val outputFile = getOutputFile(args)
+    val reductionWidth = getReductionWidth(args)
+    val reductionHeight = getReductionHeight(args)
 
     if (inputFile == null || outputFile == null) {
         println("Wrong arguments")
         return
     }
 
-    val bufferedImage = try {
-        ImageIO.read(File(inputFile))
-    } catch (e: IOException) {
-        println("Input file $inputFile not found")
-        return
-    }
+    val imageProcessor: ImageProcessor = ImageIOHandler()
+    imageProcessor.processImage(inputFile, outputFile, reductionWidth, reductionHeight)
+}
 
-    val bufferedImage90DegreesRight = rotateImage90DegreesRight(bufferedImage)
+fun isSeam(coordinate: Coordinate, seam: List<Coordinate>): Boolean {
+    return seam.any { it.x == coordinate.x && it.y == coordinate.y }
+}
 
-    val energyMatrix = mutableListOf<MutableList<Double>>()
+fun getReductionHeight(args: Array<String>): Int? {
+    val indexIn = args.indexOf("-height")
+    if (indexIn != -1 && args.size > indexIn + 1) return args[indexIn + 1].toInt()
+    return null
+}
 
-    for (x in 0 until bufferedImage90DegreesRight.width) {
-        val energyColumn = mutableListOf<Double>()
-        for (y in 0 until bufferedImage90DegreesRight.height) {
-            val xCorr = if (x == 0) 1 else if (x == bufferedImage90DegreesRight.width - 1) x - 1 else x
-            val yCorr = if (y == 0) 1 else if (y == bufferedImage90DegreesRight.height - 1) y - 1 else y
-            val colorLeft = Color(bufferedImage90DegreesRight.getRGB(xCorr - 1, y))
-            val colorRight = Color(bufferedImage90DegreesRight.getRGB(xCorr + 1, y))
-            val colorUp = Color(bufferedImage90DegreesRight.getRGB(x, yCorr - 1))
-            val colorDown = Color(bufferedImage90DegreesRight.getRGB(x, yCorr + 1))
-            val gradX =
-                (colorLeft.red - colorRight.red) * (colorLeft.red - colorRight.red).toDouble() + (colorLeft.green - colorRight.green) * (colorLeft.green - colorRight.green).toDouble() + (colorLeft.blue - colorRight.blue) * (colorLeft.blue - colorRight.blue).toDouble()
-
-            val gradY =
-                (colorUp.red - colorDown.red) * (colorUp.red - colorDown.red).toDouble() + (colorUp.green - colorDown.green) * (colorUp.green - colorDown.green).toDouble() + (colorUp.blue - colorDown.blue) * (colorUp.blue - colorDown.blue).toDouble()
-
-            val energy = sqrt(gradX + gradY)
-
-            energyColumn.add(energy)
-        }
-        energyMatrix.add(energyColumn)
-    }
-
-    val matrix = mutableListOf<MutableList<Double>>()
-
-    // row of zeros as entry and exit point for the path
-    val zeroRow = MutableList(energyMatrix.size) { 0.0 }
-    matrix.add(zeroRow)
-
-    for (y in 0 until energyMatrix.first().size) {
-        val row = mutableListOf<Double>()
-        for (x in 0 until energyMatrix.size) {
-            row.add(energyMatrix[x][y])
-        }
-        matrix.add(row)
-    }
-    matrix.add(zeroRow)
-    val shortestPath = findShortestPath(matrix)
-
-    for (coordinates in shortestPath) {
-        bufferedImage90DegreesRight.setRGB(coordinates.x, coordinates.y, Color(255, 0, 0).rgb)
-    }
-
-    ImageIO.write(rotateImage90DegreesLeft(bufferedImage90DegreesRight), "png", File(outputFile))
-
+fun getReductionWidth(args: Array<String>): Int? {
+    val indexIn = args.indexOf("-width")
+    if (indexIn != -1 && args.size > indexIn + 1) return args[indexIn + 1].toInt()
+    return null
 }
 
 private fun getInputFile(args: Array<String>): String? {
@@ -87,9 +45,7 @@ private fun getOutputFile(args: Array<String>): String? {
     return null
 }
 
-data class Coordinate(val x: Int, val y: Int)
-
-fun findShortestPath(matrix: List<List<Double>>): List<Coordinate> {
+fun getVerticalSeam(matrix: List<List<Double>>): List<Coordinate> {
     val numRows = matrix.size
     val numCols = matrix[0].size
 
@@ -117,40 +73,11 @@ fun findShortestPath(matrix: List<List<Double>>): List<Coordinate> {
         }
 
         // Explore neighboring vertices in the same row in the first and the last rows only
-        if (current.y == 0 || current.y == numRows - 1) {
-            for (dx in -1..1) {
-                val nextX = current.x + dx
-                if (nextX < 0 || nextX >= numCols || nextX == current.x) continue
-
-                val next = Coordinate(nextX, current.y)
-                if (next.y < 0 || next.y >= numRows) continue // Check for valid row
-                val edgeWeight = matrix[next.y][next.x]
-                val newDistance = currentDistance + edgeWeight
-
-                if (newDistance < (distanceMap[next] ?: Double.MAX_VALUE)) {
-                    distanceMap[next] = newDistance
-                    priorityQueue.offer(next to newDistance)
-                    previousMap[next] = current
-                }
-            }
-        }
+        if (current.y == 0 || current.y == numRows - 1)
+            explore(current, currentDistance, numCols, numRows, matrix, distanceMap, priorityQueue, previousMap, 0)
 
         // Explore neighboring vertices in the next row
-        for (dx in -1..1) {
-            val nextX = current.x + dx
-            if (nextX < 0 || nextX >= numCols) continue
-
-            val next = Coordinate(nextX, current.y + 1)
-            if (next.y < 0 || next.y >= numRows) continue // Check for valid row
-            val edgeWeight = matrix[next.y][next.x]
-            val newDistance = currentDistance + edgeWeight
-
-            if (newDistance < (distanceMap[next] ?: Double.MAX_VALUE)) {
-                distanceMap[next] = newDistance
-                priorityQueue.offer(next to newDistance)
-                previousMap[next] = current
-            }
-        }
+        explore(current, currentDistance, numCols, numRows, matrix, distanceMap, priorityQueue, previousMap, 1)
     }
 
     // Reconstruct the shortest path
@@ -171,34 +98,30 @@ fun findShortestPath(matrix: List<List<Double>>): List<Coordinate> {
         .map { coordinate -> Coordinate(coordinate.x, coordinate.y - 1) }
 }
 
-fun rotateImage90DegreesRight(inputImage: BufferedImage): BufferedImage {
-    val width = inputImage.width
-    val height = inputImage.height
+private fun explore(
+    current: Coordinate,
+    currentDistance: Double,
+    numCols: Int,
+    numRows: Int,
+    matrix: List<List<Double>>,
+    distanceMap: MutableMap<Coordinate, Double>,
+    priorityQueue: PriorityQueue<Pair<Coordinate, Double>>,
+    previousMap: MutableMap<Coordinate, Coordinate>,
+    offset: Int
+) {
+    for (dx in -1..1) {
+        val nextX = current.x + dx
+        if (nextX < 0 || nextX >= numCols) continue
 
-    val rotatedImage = BufferedImage(height, width, inputImage.type)
+        val next = Coordinate(nextX, current.y + offset)
+        if (next.y < 0 || next.y >= numRows) continue // Check for valid row
+        val edgeWeight = matrix[next.y][next.x]
+        val newDistance = currentDistance + edgeWeight
 
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            val pixel = inputImage.getRGB(x, y)
-            rotatedImage.setRGB(height - 1 - y, x, pixel)
+        if (newDistance < (distanceMap[next] ?: Double.MAX_VALUE)) {
+            distanceMap[next] = newDistance
+            priorityQueue.offer(next to newDistance)
+            previousMap[next] = current
         }
     }
-
-    return rotatedImage
-}
-
-fun rotateImage90DegreesLeft(inputImage: BufferedImage): BufferedImage {
-    val width = inputImage.width
-    val height = inputImage.height
-
-    val rotatedImage = BufferedImage(height, width, inputImage.type)
-
-    for (x in 0 until width) {
-        for (y in 0 until height) {
-            val pixel = inputImage.getRGB(x, y)
-            rotatedImage.setRGB(y, width - 1 - x, pixel)
-        }
-    }
-
-    return rotatedImage
 }

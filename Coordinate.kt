@@ -1,0 +1,3 @@
+package seamcarving
+
+data class Coordinate(val x: Int, val y: Int)
